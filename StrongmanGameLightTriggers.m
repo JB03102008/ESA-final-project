@@ -1,5 +1,7 @@
 function [t1, t2, t3] = StrongmanGameLightTriggers(deviceID, voltageChannel, inputChannel)
-%% Strongman Game - Real-time (polling version for Digilent DAQs)
+%% Strongman Game - light triggers v2.0
+% polls light sensors in real time
+% version 2.0
 
 if nargin < 1, deviceID = "AD3_0"; end
 if nargin < 2, voltageChannel = "V+"; end
