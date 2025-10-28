@@ -1,81 +1,66 @@
 function [t1, t2, t3] = StrongmanGameLightTriggers(deviceID, voltageChannel, inputChannel)
-%% The Strongman Game - Light trigger script - version 1.0 (function form)
-% Calculates time difference between three voltage drops (e.g. ball
-% positions) using IR LEDs and photodiodes.
-% Made by UTWENTE-BSC-EE-ESA group 3
-% Version: 1.0 (function version)
+%% Strongman Game - Real-time (polling version for Digilent DAQs)
 
-% --- Default parameters ---------------------------------------------------
 if nargin < 1, deviceID = "AD3_0"; end
 if nargin < 2, voltageChannel = "V+"; end
 if nargin < 3, inputChannel = "ai1"; end
 
-daqreset;  % reset all DAQ devices
+daqreset;
 
-% --- Create DAQ objects ---------------------------------------------------
-AI = daq("digilent");   % Analog input (for photodiode)
-VP = daq("digilent");   % Power supply (V+ rail)
+AI = daq("digilent");
+VP = daq("digilent");
 
-% --- Configure V+ as voltage output --------------------------------------
 addoutput(VP, deviceID, voltageChannel, "Voltage");
-
-% --- Configure analog input ----------------------------------------------
 addinput(AI, deviceID, inputChannel, "Voltage");
-AI.Rate = 10000;  % Set sample rate
+AI.Rate = 10000;
 
-% --- Set V+ to 5V --------------------------------------------------------
-fprintf("Setting V+ to 5V...\n");
-write(VP, 5);   % Sets 5V on v+ rail
+write(VP, 5);
+fprintf("V+ set to 5V\n");
 
-% --- Start background acquisition ----------------------------------------
-fprintf("Starting acquisition for 10 seconds...\n");
-start(AI, "Duration", seconds(10));
+% --- Initialize ---
+t1 = NaN; t2 = NaN; t3 = NaN;
+dropCount = 0;
+tStart = tic;
 
-% --- Wait for acquisition to finish --------------------------------------
-while AI.Running
-    pause(0.1);
+fprintf("Monitoring signal...\n");
+
+bufferTime = 0.1;  % seconds per read
+samplesPerRead = round(AI.Rate * bufferTime);
+window = [];
+
+while dropCount < 3
+    % Read small chunk
+    data = read(AI, seconds(bufferTime));
+    v = data{:,1};
+    window = [window; v];
+
+    % Keep ~2 seconds of recent data
+    if numel(window) > 2*AI.Rate
+        window = window(end-2*AI.Rate+1:end);
+    end
+
+    % Analyze for dips
+    vs = smooth(window, 50);
+    [~, locs] = findpeaks(-vs, 'MinPeakProminence', 0.05);
+
+    if numel(locs) > dropCount
+        dropCount = numel(locs);
+        tNow = toc(tStart);
+        switch dropCount
+            case 1
+                t1 = tNow;
+                fprintf("Dip 1 at %.4f s\n", t1);
+            case 2
+                t2 = tNow;
+                fprintf("Dip 2 at %.4f s\n", t2);
+            case 3
+                t3 = tNow;
+                fprintf("Dip 3 at %.4f s\n", t3);
+        end
+    end
 end
 
-% --- Retrieve data -------------------------------------------------------
-data = read(AI, "all");
-fprintf("Acquisition done.\n");
-
-t_sec = seconds(data.Time);
-v = data{:, 1};
-
-% --- Analyze voltage drops -----------------------------------------------
-fprintf("Analyzing voltage drops...\n");
-
-vs = smooth(v, 50);  % smooth signal to reduce noise
-[~, locs] = findpeaks(-vs, 'MinPeakProminence', 0.05);
-locs_sec = t_sec(locs);
-
-% --- Assign first three drop times to t1, t2, t3 -------------------------
-if numel(locs_sec) >= 3
-    t1 = locs_sec(1);
-    t2 = locs_sec(2);
-    t3 = locs_sec(3);
-elseif numel(locs_sec) == 2
-    t1 = locs_sec(1);
-    t2 = locs_sec(2);
-    t3 = NaN;
-elseif numel(locs_sec) == 1
-    t1 = locs_sec(1);
-    t2 = NaN;
-    t3 = NaN;
-else
-    t1 = NaN;
-    t2 = NaN;
-    t3 = NaN;
-end
-
-% --- Output results ------------------------------------------------------
-fprintf("t1 = %.4f s\n", t1);
-fprintf("t2 = %.4f s\n", t2);
-fprintf("t3 = %.4f s\n", t3);
-
-% --- Reset V+ ------------------------------------------------------------
 write(VP, 0);
-fprintf("V+ now reset to 0V...\n");
+fprintf("V+ reset to 0V\n");
 
 end
