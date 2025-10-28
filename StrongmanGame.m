@@ -1,4 +1,4 @@
-function = StrongmanGame(deviceID, motorChannel, solenoidChannel, LEDpowerChannel, PhotoDiodeinputChannel)
+function StrongmanGame(deviceID, motorChannel, solenoidChannel, LEDpowerChannel, PhotoDiodeinputChannel)
 % The Strongman Game - main script - v0.1
 % Calls all subscripts to run The Strongman Game
 % Made by UTWENTE-BSC-EE-ESA group 3
@@ -6,11 +6,11 @@ function = StrongmanGame(deviceID, motorChannel, solenoidChannel, LEDpowerChanne
 
 % Default AD3 IO configuration, will be used when no input arguments are
 % supplied
-if nargin < 1, deviceID = "AD3_0";
-if nargin < 2, motorChannel = "ao0";
-if nargin < 3, solenoidChannel = "dio00";
-if nargin < 4, LEDpowerChannel = "V+";
-if nargin < 5, PhotoDiodeinputChannel = "ai1";
+if nargin < 1, deviceID = "AD3_0"; end
+if nargin < 2, motorChannel = "ao0"; end
+if nargin < 3, solenoidChannel = "dio00"; end
+if nargin < 4, LEDpowerChannel = "V+"; end
+if nargin < 5, PhotoDiodeinputChannel = "ai1"; end
 
 disp("Starting The Strongman Game")
 
