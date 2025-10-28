@@ -9,3 +9,12 @@ StrongmanGameMotorControl() % Calls motor control script
 
 disp("Calling light triggers script")
 StrongmanGameLightTriggers() % Calls light triggers script
+
+disp("Calling height estimation script")
+StrongmanGameHeightEstimation() % Calls height estimation script
+fprintf("Predicted height ",h_predicted)
+
+disp("Calling ultrasonic sensing script")
+StrongmanGameUltrasonicSensing() % Calls ultrasonic sensing script
+fprintf("Measured height ",h_measured)
+

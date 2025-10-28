@@ -1,7 +1,7 @@
 %% The Strongman Game - Light trigger script - version 1.0
 % calculates time difference between three voltage drops (e.g. ball
 % positions) using IR LEDs and photodiodes.
-%
+% Made by UTWENTE-BSC-EE-ESA group 3
 % version 1.0
 
 clear; clc;

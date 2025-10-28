@@ -1,7 +1,7 @@
 %% The Strongman Game - Motor control script v1.0 (First final version)
 % Strongman Game - Motor (clocked square wave) + Solenoid (digital)
 % Uses separate DAQ sessions to keep clocked AO active
-%
+% Made by UTWENTE-BSC-EE-ESA group 3
 % Version: 1.0
 
 clear; clc; close all;
