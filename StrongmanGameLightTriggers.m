@@ -1,51 +1,74 @@
-% Beam-break detection on AD3 without calllib (Data Acquisition Toolbox)
-% Requirements:
-% - MATLAB Data Acquisition Toolbox
-% - "MATLAB Support Package for Digilent Analog Discovery Hardware"
-% - AD3 connected; receiver on CH1+ (ai1), CH1- tied to GND
+%% The Strongman Game - Light trigger script - version 1.0
+% calculates time difference between three voltage drops (e.g. ball
+% positions) using IR LEDs and photodiodes.
+%
+% version 1.0
 
-observeSeconds = 10;
-breakThresh_V  = 0.150;     % beam break below this voltage
-Fs             = 10000;     % sample rate (Hz)
+clear; clc;
+daqreset;  % reset all DAQ devices
 
-% Create Digilent DAQ object
-d = daq("digilent");        % discovers first AD device (AD3)
-d.Rate = Fs;
+% --- Create DAQ objects ---------------------------------------------------
+AI = daq("digilent");   % Analog input (for photodiode)
+VP = daq("digilent");   % Power supply (V+ rail)
 
-% Turn on +5 V rail (V+). Property/method names vary slightly by release.
-% Try common options; ignore ones not present.
-try
-    % Newer releases use powerSupply property
-    d.PowerSupplyEnabled = true;
-    d.PowerSupplyPositiveVoltage = 5.0;
-catch
+% --- Configure V+ as voltage output --------------------------------------
+addoutput(VP, "AD3_0", "V+", "Voltage");
+
+% --- Configure ai0 as analog input ---------------------------------------
+addinput(AI, "AD3_0", "ai0", "Voltage");
+AI.Rate = 10000;  % Set sample rate
+
+% --- Set V+ to 5V --------------------------------------------------------
+fprintf("Setting V+ to 5V...\n");
+write(VP, 5);   % Sets 5V on v+ rail
+
+% --- Start background acquisition ----------------------------------------
+fprintf("Starting acquisition for 10 seconds...\n");
+start(AI, "Duration", seconds(10));
+
+% --- Wait for acquisition to finish --------------------------------------
+while AI.Running
+    pause(0.1);
 end
-try
-    % Some releases expose a helper to configure supplies
-    configurePowerSupply(d, "on", 5.0, "off", 0.0);  % VS+, VS-
-catch
-end
 
-% Add AI1 voltage channel (single‑ended to ground)
-ch = addinput(d, "AD3_0", "ai0", "Voltage");
-ch.Range = [-0.5 0.5];      % tighten for better resolution if supported
+% --- Retrieve data -------------------------------------------------------
+data = read(AI, "all");
+fprintf("Acquisition done.\n");
 
-fprintf("Watching AI1 for %.1f s (break < %.0f mV)...\n", observeSeconds, breakThresh_V*1e3);
+t_sec = seconds(data.Time);
+v = data.AD3_0_ai0;
 
-% Acquire in one read (simple) — fast enough for thresholding
-T = read(d, seconds(observeSeconds), "OutputFormat", "Matrix");  % returns Nx1 double
-v = T(:,1);
+% --- Analyze voltage drops -----------------------------------------------
+fprintf("Analyzing voltage drops...\n");
 
-if any(v < breakThresh_V)
-    firstIdx = find(v < breakThresh_V, 1, "first");
-    tBreak = (firstIdx-1)/Fs;
-    fprintf("Beam BREAK detected at t=%.3f s. Min=%.0f mV\n", tBreak, 1e3*min(v));
+vs = smooth(v, 50);  % smooth signal to reduce noise
+[~, locs] = findpeaks(-vs, 'MinPeakProminence', 0.05);
+locs_sec = t_sec(locs);
+
+% --- Assign first three drop times to t1, t2, t3 -------------------------
+if numel(locs_sec) >= 3
+    t1 = locs_sec(1);
+    t2 = locs_sec(2);
+    t3 = locs_sec(3);
+elseif numel(locs_sec) == 2
+    t1 = locs_sec(1);
+    t2 = locs_sec(2);
+    t3 = NaN;
+elseif numel(locs_sec) == 1
+    t1 = locs_sec(1);
+    t2 = NaN;
+    t3 = NaN;
 else
-    fprintf("No beam break detected in %.1f s. Min=%.0f mV\n", observeSeconds, 1e3*min(v));
+    t1 = NaN;
+    t2 = NaN;
+    t3 = NaN;
 end
 
-% Optional: turn supply off at end (comment to keep on)
-try
-    d.PowerSupplyEnabled = false;
-catch
-end
+% --- Output results ------------------------------------------------------
+fprintf("t1 = %.4f s\n", t1);
+fprintf("t2 = %.4f s\n", t2);
+fprintf("t3 = %.4f s\n", t3);
+
+% --- Reset V+ ------------------------------------------------------------
+write(VP, 0);
+fprintf("V+ now reset to 0V...\n");
