@@ -1,35 +1,50 @@
 function StrongmanGame(deviceID, motorChannel, solenoidChannel, LEDpowerChannel, PhotoDiodeinputChannel)
-% The Strongman Game - main script - v0.1
-% Calls all subscripts to run The Strongman Game
-% Made by UTWENTE-BSC-EE-ESA group 3
-% version 1.0
+    if nargin < 1, deviceID = "AD3_0"; end
+    if nargin < 2, motorChannel = "ao0"; end
+    if nargin < 3, solenoidChannel = "dio00"; end
+    if nargin < 4, LEDpowerChannel = "V+"; end
+    if nargin < 5, PhotoDiodeinputChannel = "ai1"; end
 
-% Default AD3 IO configuration, will be used when no input arguments are
-% supplied
-if nargin < 1, deviceID = "AD3_0"; end
-if nargin < 2, motorChannel = "ao0"; end
-if nargin < 3, solenoidChannel = "dio00"; end
-if nargin < 4, LEDpowerChannel = "V+"; end
-if nargin < 5, PhotoDiodeinputChannel = "ai1"; end
+    disp("=== Starting The Strongman Game ===")
 
-disp("Starting The Strongman Game")
+    % start ultrasonic in background timer
+    ultrasonicData = [];
+    t_ultra = timer('ExecutionMode','fixedSpacing','Period',0.05,...
+        'TimerFcn',@(~,~) collectUltrasonic());
 
-disp("Calling Motor Control script")
-StrongmanGameMotorControl(deviceID, motorChannel, solenoidChannel); % Calls motor control function
+    start(t_ultra);
+    disp("Ultrasonic sensing started.")
 
-disp("Calling light triggers script")
-[t1, t2, t3] = StrongmanGameLightTriggers(deviceID, LEDpowerChannel, PhotoDiodeinputChannel); % Calls light triggers function
+    % motor + light triggers "parallel"
+    disp("Starting motor control...")
+    motorFuture = parfeval(@StrongmanGameMotorControl, 0, deviceID, motorChannel, solenoidChannel);
 
-disp("Calling height estimation script")
-h_predicted = StrongmanGameHeightEstimation(t1, t2, t3); % Calls height estimation function
-fprintf("Predicted height ",h_predicted) % Displays predicted height based on differential equations from height estimation script
+    disp("Running light triggers...")
+    [t1,t2,t3] = StrongmanGameLightTriggers(deviceID, LEDpowerChannel, PhotoDiodeinputChannel);
 
-disp("Calling ultrasonic sensing script")
-h_measured = StrongmanGameUltrasonicSensing(); % Calls ultrasonic sensing function
-fprintf("Measured height ",h_measured) % Displays measured height from ultrasonic sensor
+    % height estimation
+    disp("Calculating predicted height...")
+    h_predicted = StrongmanGameHeightEstimation(t1,t2,t3);
 
-disp("Calling rotary display driver script")
-StrongmanGameRotaryDisplayDriver(h_measured);
+    % stop ultrasonic sensing
+    stop(t_ultra);
+    delete(t_ultra);
 
-%disp("Script finished, cleaning up...")
+    % wait for motor to finish
+    wait(motorFuture);
+
+    % compute max measured height
+    h_measured = max(ultrasonicData);
+    fprintf("Predicted height: %.2f\n", h_predicted);
+    fprintf("Measured height: %.2f\n", h_measured);
+
+    disp("Activating rotary display...")
+    StrongmanGameRotaryDisplayDriver(h_measured);
+
+    disp("=== Game finished ===")
+
+    function collectUltrasonic()
+        h = StrongmanGameUltrasonicSensing();
+        ultrasonicData(end+1) = h;
+    end
 end
