@@ -1,4 +1,4 @@
-function h_predicted = StrongmanBallHeight(t1, t2, t3)
+function h_predicted = StrongmanGameHeightEstimation(t1, t2, t3)
 %% The Strongman Game - height estimation - version 1.0
 % Estimates motion constants and maximum height for a vertically launched ball,
 % given three (time, position) points.
