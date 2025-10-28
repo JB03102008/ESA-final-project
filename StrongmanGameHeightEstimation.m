@@ -8,6 +8,7 @@ function h_predicted = StrongmanGameHeightEstimation(t1, t2, t3)
 %
 % OUTPUT:
 %   h_predicted : predicted maximum height [m]
+% Made by UTWENTE-BSC-EE-ESA group 3
 % version 1.0
 
 % Keep multiple variables

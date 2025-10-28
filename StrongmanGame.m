@@ -1,4 +1,9 @@
 function StrongmanGame(deviceID, motorChannel, solenoidChannel, LEDpowerChannel, PhotoDiodeinputChannel)
+  % The strongman game - main script version 2.0
+  % Calls all functions in order to run the game.
+  % Made by UTWENTE-BSC-EE-ESA group 3
+  % version 2.0
+
     if nargin < 1, deviceID = "AD3_0"; end
     if nargin < 2, motorChannel = "ao0"; end
     if nargin < 3, solenoidChannel = "dio00"; end

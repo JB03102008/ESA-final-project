@@ -1,6 +1,7 @@
 function [t1, t2, t3] = StrongmanGameLightTriggers(deviceID, voltageChannel, inputChannel)
 %% Strongman Game - light triggers v2.0
 % polls light sensors in real time
+% Made by UTWENTE-BSC-EE-ESA group 3
 % version 2.0
 
 if nargin < 1, deviceID = "AD3_0"; end
