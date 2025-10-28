@@ -121,9 +121,3 @@ ylabel('Height (m)');
 title('Predicted Height vs Time');
 grid on;
 
-subplot(2,1,2);
-plot(t_plot, v_plot, 'r-', 'LineWidth', 2);
-xlabel('Time (s)');
-ylabel('Velocity (m/s)');
-title('Predicted Velocity vs Time');
-grid on;
