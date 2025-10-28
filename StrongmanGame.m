@@ -21,10 +21,15 @@ disp("Calling light triggers script")
 [t1, t2, t3] = StrongmanGameLightTriggers(deviceID, LEDpowerChannel, PhotoDiodeinputChannel); % Calls light triggers function
 
 disp("Calling height estimation script")
-StrongmanGameHeightEstimation() % Calls height estimation function
+h_predicted = StrongmanGameHeightEstimation(); % Calls height estimation function
 fprintf("Predicted height ",h_predicted) % Displays predicted height based on differential equations from height estimation script
 
 disp("Calling ultrasonic sensing script")
-StrongmanGameUltrasonicSensing() % Calls ultrasonic sensing function
+h_measured = StrongmanGameUltrasonicSensing(); % Calls ultrasonic sensing function
 fprintf("Measured height ",h_measured) % Displays measured height from ultrasonic sensor
 
+disp("Calling rotary display driver script")
+StrongmanGameRotaryDisplayDriver(h_measured);
+
+disp("Script finished, cleaning up...")
+end
