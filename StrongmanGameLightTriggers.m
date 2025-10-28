@@ -1,9 +1,14 @@
 function [t1, t2, t3] = StrongmanGameLightTriggers(deviceID, voltageChannel, inputChannel)
-%% The Strongman Game - Light trigger script - version 1.0
-% calculates time difference between three voltage drops (e.g. ball
+%% The Strongman Game - Light trigger script - version 1.0 (function form)
+% Calculates time difference between three voltage drops (e.g. ball
 % positions) using IR LEDs and photodiodes.
 % Made by UTWENTE-BSC-EE-ESA group 3
-% version 1.0
+% Version: 1.0 (function version)
+
+% --- Default parameters ---------------------------------------------------
+if nargin < 1, deviceID = "AD3_0"; end
+if nargin < 2, voltageChannel = "V+"; end
+if nargin < 3, inputChannel = "ai1"; end
 
 daqreset;  % reset all DAQ devices
 
@@ -14,7 +19,7 @@ VP = daq("digilent");   % Power supply (V+ rail)
 % --- Configure V+ as voltage output --------------------------------------
 addoutput(VP, deviceID, voltageChannel, "Voltage");
 
-% --- Configure ai0 as analog input ---------------------------------------
+% --- Configure analog input ----------------------------------------------
 addinput(AI, deviceID, inputChannel, "Voltage");
 AI.Rate = 10000;  % Set sample rate
 
@@ -36,7 +41,7 @@ data = read(AI, "all");
 fprintf("Acquisition done.\n");
 
 t_sec = seconds(data.Time);
-v = data.(strcat(deviceID, "_", inputChannel));
+v = data{:, 1};
 
 % --- Analyze voltage drops -----------------------------------------------
 fprintf("Analyzing voltage drops...\n");
@@ -72,4 +77,5 @@ fprintf("t3 = %.4f s\n", t3);
 % --- Reset V+ ------------------------------------------------------------
 write(VP, 0);
 fprintf("V+ now reset to 0V...\n");
+
 end

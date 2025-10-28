@@ -31,5 +31,5 @@ fprintf("Measured height ",h_measured) % Displays measured height from ultrasoni
 disp("Calling rotary display driver script")
 StrongmanGameRotaryDisplayDriver(h_measured);
 
-disp("Script finished, cleaning up...")
+%disp("Script finished, cleaning up...")
 end
