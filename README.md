@@ -1,1 +1,2 @@
-# ESA-final-project
+# ESA final projetc
+"The strongman game" MATLAB code
