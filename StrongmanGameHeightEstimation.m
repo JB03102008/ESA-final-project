@@ -26,8 +26,8 @@ fprintf('alpha = %.3e, C = %.6f\n\n', alpha, C);
 
 %% --- INPUT YOUR SENSOR MEASUREMENTS HERE ---
 % (Positions in meters, times provided as inputs)
-y1 = 0;       % lower sensor
-y2 = 0.15;    % middle sensor
+y1 = 0.09;    % lower sensor
+y2 = 0.29;    % middle sensor
 y3 = 0.30;    % upper sensor
 
 %% --- Solve for integration constants A and B ---
