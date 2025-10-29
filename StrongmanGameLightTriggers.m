@@ -1,24 +1,8 @@
-function [t1, t2, t3] = StrongmanGameLightTriggers(deviceID, voltageChannel, inputChannel)
-%% Strongman Game - light triggers v2.0
+function [t1, t2, t3] = StrongmanGameLightTriggers(dqAI)
+%% Strongman Game - light triggers v2.2 (embedded version)
 % polls light sensors in real time
 % Made by UTWENTE-BSC-EE-ESA group 3
-% version 2.0
-
-if nargin < 1, deviceID = "AD3_0"; end
-if nargin < 2, voltageChannel = "V+"; end
-if nargin < 3, inputChannel = "ai1"; end
-
-daqreset;
-
-AI = daq("digilent");
-VP = daq("digilent");
-
-addoutput(VP, deviceID, voltageChannel, "Voltage");
-addinput(AI, deviceID, inputChannel, "Voltage");
-AI.Rate = 10000;
-
-write(VP, 5);
-fprintf("V+ set to 5V\n");
+% version 2.2
 
 % --- Initialize ---
 t1 = NaN; t2 = NaN; t3 = NaN;
@@ -27,43 +11,60 @@ tStart = tic;
 
 fprintf("Monitoring signal...\n");
 
-bufferTime = 0.1;  % seconds per read
-samplesPerRead = round(AI.Rate * bufferTime);
+% Initialize plot
+photoTime = [];
+photoVolt = [];
 window = [];
 
-while dropCount < 3
-    % Read small chunk
-    data = read(AI, seconds(bufferTime));
-    v = data{:,1};
-    window = [window; v];
+figure('Name','Photodiode Debug','NumberTitle','off');
+phPlot = plot(nan, nan, 'b-');
+xlabel('Time (s)');
+ylabel('Photodiode Voltage (V)');
+grid on;
+title('Photodiode Signal Over Time');
+drawnow;
 
-    % Keep ~2 seconds of recent data
-    if numel(window) > 2*AI.Rate
-        window = window(end-2*AI.Rate+1:end);
+bufferTime = 0.05;  % seconds per read
+
+while dropCount < 3
+    data = read(dqAI, seconds(bufferTime));
+    v = data{:,1};
+    tNow = toc(tStart);
+
+    % Store and update plot
+    photoTime = [photoTime; tNow];
+    photoVolt = [photoVolt; mean(v)];
+    set(phPlot, 'XData', photoTime, 'YData', photoVolt);
+    drawnow limitrate nocallbacks;
+
+    % Append to rolling window
+    window = [window; v];
+    if numel(window) > 200
+        window = window(end-199:end);
     end
 
-    % Analyze for dips
-    vs = smooth(window, 50);
-    [~, locs] = findpeaks(-vs, 'MinPeakProminence', 0.05);
-
-    if numel(locs) > dropCount
-        dropCount = numel(locs);
-        tNow = toc(tStart);
-        switch dropCount
-            case 1
-                t1 = tNow;
-                fprintf("Dip 1 at %.4f s\n", t1);
-            case 2
-                t2 = tNow;
-                fprintf("Dip 2 at %.4f s\n", t2);
-            case 3
-                t3 = tNow;
-                fprintf("Dip 3 at %.4f s\n", t3);
+    % Sensitive dip detection
+    if numel(window) > 10
+        vs = smooth(window, 10);
+        baseline = median(vs);
+        dropThreshold = baseline - 0.002; % absolute 2 mV drop
+        relDrop = (baseline - min(vs)) / baseline;
+        if min(vs) < dropThreshold || relDrop > 0.01
+            dropCount = dropCount + 1;
+            switch dropCount
+                case 1
+                    t1 = tNow;
+                    fprintf("Dip 1 at %.4f s (%.4f V min)\n", t1, min(vs));
+                case 2
+                    t2 = tNow;
+                    fprintf("Dip 2 at %.4f s (%.4f V min)\n", t2, min(vs));
+                case 3
+                    t3 = tNow;
+                    fprintf("Dip 3 at %.4f s (%.4f V min)\n", t3, min(vs));
+            end
+            window = [];
+            pause(0.2); % debounce
         end
     end
 end
-
-write(VP, 0);
-fprintf("V+ reset to 0V\n");
-
 end

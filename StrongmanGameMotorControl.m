@@ -1,9 +1,9 @@
-function StrongmanGameMotorControl(deviceID, motorChannel, solenoidChannel)
-%% The Strongman Game - Motor control script v1.0 (First final version)
+function StrongmanGameMotorControl(dqAO, dqDigital)
+%% The Strongman Game - Motor control script v2.0
 % Strongman Game - Motor (clocked square wave) + Solenoid (digital)
 % Uses separate DAQ sessions to keep clocked AO active
 % Made by UTWENTE-BSC-EE-ESA group 3
-% Version: 1.0
+% Version: 2.0
 
 %% ================= SETUP PARAMETERS =================
 PWMfreq = 1e3;                     % Square-wave frequency [Hz]
@@ -15,14 +15,7 @@ sampleRate = 5e3;                  % Analog output sample rate [Hz]
 %% ================= INITIALIZE DEVICES =================
 disp('Initializing Analog Discovery 3 for clocked AO and digital DO...');
 
-% --- Motor session (clocked AO) ---
-dqMotor = daq("digilent");
-dqMotor.Rate = sampleRate;
-addoutput(dqMotor, deviceID, motorChannel, "Voltage");
-
-% --- Solenoid session (on-demand DO) ---
-dqSolenoid = daq("digilent");
-addoutput(dqSolenoid, deviceID, solenoidChannel, "Digital");
+dqAO.Rate = sampleRate;
 
 disp('Devices initialized successfully.');
 
@@ -56,21 +49,26 @@ disp(['Generating ', num2str(PWMfreq), ' Hz PWM, ', ...
 %% ================= ACTUATE MOTOR AND SOLENOID (OVERLAP) =================
 disp('Starting motor and solenoid sequence...');
 
-preload(dqMotor, motorSignal);
-start(dqMotor);   % Non-blocking start
+dataOut = [motorSignal zeros(length(motorSignal), 1)];
+preload(dqAO, dataOut);
+start(dqAO, "repeatoutput");
 
 pause(0.2);      % optional sync delay
 disp('Activating solenoid...');
-write(dqSolenoid, true);
-pause(solenoidTime);
-write(dqSolenoid, false);
+write(dqDigital, true);
+
+tSolenoid = tic;
+while toc(tSolenoid) < solenoidTime
+    pause(0.01);
+end
+
+write(dqDigital, false);
 disp('Solenoid released.');
 
 pause(runTime);
-write(dqMotor, 0);
+write(dqAO, [0 0]);
 disp('Motor stopped.');
 
 %% ================= CLEANUP =================
-clear dqMotor dqSolenoid;
 disp('Devices released. Sequence complete.');
 end

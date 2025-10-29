@@ -1,4 +1,4 @@
-function h_measured = StrongmanGameUltrasonicSensing(OutputChannel, InputChannel)
+function h_measured = StrongmanGameUltrasonicSensing(dqA)
 % The Strongman Game - ultrasonic sensing script version 0.1
 % OutputChannel = output from AD3 to sensor
 % InputChannel = input from sensor to AD3
