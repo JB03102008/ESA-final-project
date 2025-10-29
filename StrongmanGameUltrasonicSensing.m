@@ -3,6 +3,7 @@ function h_measured = StrongmanGameUltrasonicSensing(OutputChannel, InputChannel
 % OutputChannel = output from AD3 to sensor
 % InputChannel = input from sensor to AD3
 % 
+% Made by UTWENTE-BSC-EE-ESA group 3
 % version 0.1
 
 % Contents will be added later
