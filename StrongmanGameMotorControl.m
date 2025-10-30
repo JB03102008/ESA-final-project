@@ -1,9 +1,9 @@
-function StrongmanGameMotorControl(dqAO, dqDigital)
-%% The Strongman Game - Motor control script v2.0
+function StrongmanGameMotorControl(dqMotor, dqSolenoid)
+%% The Strongman Game - Motor control script v1.0 (First final version)
 % Strongman Game - Motor (clocked square wave) + Solenoid (digital)
 % Uses separate DAQ sessions to keep clocked AO active
 % Made by UTWENTE-BSC-EE-ESA group 3
-% Version: 2.0
+% Version: 1.0
 
 %% ================= SETUP PARAMETERS =================
 PWMfreq = 1e3;                     % Square-wave frequency [Hz]
@@ -13,9 +13,13 @@ solenoidTime = 0.3;                % Solenoid activation duration [s]
 sampleRate = 5e3;                  % Analog output sample rate [Hz]
 
 %% ================= INITIALIZE DEVICES =================
-disp('Initializing Analog Discovery 3 for clocked AO and digital DO...');
 
-dqAO.Rate = sampleRate;
+% DAQ sessions init happens in main script
+
+% --- Motor session (clocked AO) ---
+sampleRate = dqMotor.Rate; % Use the Rate from the passed session
+
+% --- Solenoid session (on-demand DO) ---
 
 disp('Devices initialized successfully.');
 
@@ -49,24 +53,18 @@ disp(['Generating ', num2str(PWMfreq), ' Hz PWM, ', ...
 %% ================= ACTUATE MOTOR AND SOLENOID (OVERLAP) =================
 disp('Starting motor and solenoid sequence...');
 
-dataOut = [motorSignal zeros(length(motorSignal), 1)];
-preload(dqAO, dataOut);
-start(dqAO, "repeatoutput");
+preload(dqMotor, motorSignal);
+start(dqMotor);   % Non-blocking start
 
 pause(0.2);      % optional sync delay
 disp('Activating solenoid...');
-write(dqDigital, true);
-
-tSolenoid = tic;
-while toc(tSolenoid) < solenoidTime
-    pause(0.01);
-end
-
-write(dqDigital, false);
+write(dqSolenoid, true);
+pause(solenoidTime);
+write(dqSolenoid, false);
 disp('Solenoid released.');
 
 pause(runTime);
-write(dqAO, [0 0]);
+write(dqMotor, 0);
 disp('Motor stopped.');
 
 %% ================= CLEANUP =================

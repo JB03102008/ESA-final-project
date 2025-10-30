@@ -1,70 +1,89 @@
-function [t1, t2, t3] = StrongmanGameLightTriggers(dqAI)
-%% Strongman Game - light triggers v2.2 (embedded version)
+function [t1, t2, t3] = StrongmanGameLightTriggers(deviceID, AI, VP, voltageChannel, inputChannel)
+%% Strongman Game - light triggers v2.0
 % polls light sensors in real time
 % Made by UTWENTE-BSC-EE-ESA group 3
-% version 2.2
+% version 2.0
 
-% --- Initialize ---
-t1 = NaN; t2 = NaN; t3 = NaN;
-dropCount = 0;
-tStart = tic;
+    % Default values if no input args are given
+    if nargin < 1, AI = "AD3_0"; end
+    if nargin < 2, VP = "V+"; end
+    if nargin < 3, voltageChannel = "ai1"; end % FIX: Added 'end'
+    if nargin < 4, inputChannel = "ai1"; end   % FIX: Assigned default value and added 'end'
+    
+    % DAQ sessions are configured in main script
+    
+    addoutput(VP, deviceID, voltageChannel, "Voltage");
+    addinput(AI, deviceID, inputChannel, "Voltage");
+    AI.Rate = 10000;
+    sampleRate = AI.Rate;
+    
+    write(VP, 5);
+    fprintf("V+ set to 5V\n");
+    
+    % --- Initialize ---
+    t1 = NaN; t2 = NaN; t3 = NaN;
+    dropCount = 0;
+    tStart = tic;
 
-fprintf("Monitoring signal...\n");
+    % Parameters (Calibrated values)
+    DIP_THRESHOLD_V = 0.01; % Taken from successful test
+    HYSTERESIS_V = 0.02;    % Hysteresis
+    isTriggered = false;    
+    
+    % Pre-initializing the buffer is essential to prevent errors in the loop
+    windowSize = 2 * sampleRate;
+    window = zeros(windowSize, 1);
+    bufferTime = 0.1;
 
-% Initialize plot
-photoTime = [];
-photoVolt = [];
-window = [];
+    fprintf("Monitoring signal... (Blocking execution)\n");
 
-figure('Name','Photodiode Debug','NumberTitle','off');
-phPlot = plot(nan, nan, 'b-');
-xlabel('Time (s)');
-ylabel('Photodiode Voltage (V)');
-grid on;
-title('Photodiode Signal Over Time');
-drawnow;
+    while dropCount < 3
+        % Read small chunk
+        data = read(AI, seconds(bufferTime));
+        v = data{:,1};
+        
+        % Update rolling window
+        if numel(v) < windowSize
+            window = [window(numel(v)+1:end); v];
+        else
+             window = v;
+        end
 
-bufferTime = 0.05;  % seconds per read
-
-while dropCount < 3
-    data = read(dqAI, seconds(bufferTime));
-    v = data{:,1};
-    tNow = toc(tStart);
-
-    % Store and update plot
-    photoTime = [photoTime; tNow];
-    photoVolt = [photoVolt; mean(v)];
-    set(phPlot, 'XData', photoTime, 'YData', photoVolt);
-    drawnow limitrate nocallbacks;
-
-    % Append to rolling window
-    window = [window; v];
-    if numel(window) > 200
-        window = window(end-199:end);
-    end
-
-    % Sensitive dip detection
-    if numel(window) > 10
-        vs = smooth(window, 10);
-        baseline = median(vs);
-        dropThreshold = baseline - 0.002; % absolute 2 mV drop
-        relDrop = (baseline - min(vs)) / baseline;
-        if min(vs) < dropThreshold || relDrop > 0.01
+        % Analyze for dips
+        if numel(window) > 50
+            vs = smooth(window, 50);
+        else
+            vs = window;
+        end
+        
+        currentBaseline = max(vs);
+        detectionThreshold = currentBaseline - DIP_THRESHOLD_V;
+        currentValue = vs(end);
+        
+        % Check for Trigger (Dip)
+        if currentValue < detectionThreshold && ~isTriggered
             dropCount = dropCount + 1;
+            tNow = toc(tStart);
+            isTriggered = true; 
+
             switch dropCount
                 case 1
                     t1 = tNow;
-                    fprintf("Dip 1 at %.4f s (%.4f V min)\n", t1, min(vs));
+                    fprintf("Dip 1 detected at %.4f s\n", t1);
                 case 2
                     t2 = tNow;
-                    fprintf("Dip 2 at %.4f s (%.4f V min)\n", t2, min(vs));
+                    fprintf("Dip 2 detected at %.4f s\n", t2);
                 case 3
                     t3 = tNow;
-                    fprintf("Dip 3 at %.4f s (%.4f V min)\n", t3, min(vs));
+                    fprintf("Dip 3 detected at %.4f s\n", t3);
             end
-            window = [];
-            pause(0.2); % debounce
+
+        % Check for Reset (Hysteresis)
+        elseif currentValue > (currentBaseline - HYSTERESIS_V) && isTriggered
+            isTriggered = false; 
         end
     end
-end
+
+    write(VP, 0);
+    fprintf("V+ reset to 0V\n");
 end

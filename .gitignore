@@ -1,2 +1,6 @@
 
 *.asv
+
+/ULTRASONIC_TEST.m
+
+/StrongmanGameLightTriggers_TEST.m

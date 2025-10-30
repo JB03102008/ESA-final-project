@@ -1,83 +1,88 @@
 function StrongmanGame(deviceID, motorChannel, solenoidChannel, LEDpowerChannel, PhotoDiodeinputChannel, UltrasonicOutputChannel, UltrasonicInputChannel)
-  % The strongman game - main script version 3.0
+  % The strongman game - main script version 2.0
   % Calls all functions in order to run the game.
   % Made by UTWENTE-BSC-EE-ESA group 3
-  % version 3.0
+  % version 2.2
 
     if nargin < 1, deviceID = "AD3_0"; end
     if nargin < 2, motorChannel = "ao0"; end
     if nargin < 3, solenoidChannel = "dio00"; end
     if nargin < 4, LEDpowerChannel = "V+"; end
-    if nargin < 5, PhotoDiodeinputChannel = "ai0"; end
+    if nargin < 5, PhotoDiodeinputChannel = "ai1"; end
     if nargin < 6, UltrasonicOutputChannel = "ao1"; end
-    if nargin < 7, UltrasonicInputChannel = "ai1"; end
+    if nargin < 7, UltrasonicInputChannel = "ai0"; end
 
-    % Sample rate
-    sampleRate = 5000; % Set the sample rate to 5 kHz for PWM
+    disp("Starting The Strongman Game")
+    
+    % Initialize and configure DAQ sessions
+    disp('Initializing and configuring DAQ sessions...');
 
-disp("Starting The Strongman Game")
+    % Motor Control Sessions (AO + DIO)
+    s_Motor = daq("digilent");
+    s_Motor.Rate = 5e3; 
+    addoutput(s_Motor, deviceID, motorChannel, "Voltage");
 
-disp("Initializing Analog Discovery 3")
+    s_Solenoid = daq("digilent");
+    addoutput(s_Solenoid, deviceID, solenoidChannel, "Digital");
 
-% Create daq sessions and add outputs
-    dqAO = daq("digilent");
-    dqAO.Rate = sampleRate;
-    addoutput(dqAO, deviceID, motorChannel, "Voltage");   % motor
-    addoutput(dqAO, deviceID, UltrasonicOutputChannel, "Voltage");   % ultrasonic out
+    % Light Trigger Sessions
 
-    dqAI = daq("digilent");
-    dqAI.Rate = 10000;
-    addinput(dqAI, deviceID, PhotoDiodeinputChannel, "Voltage");    % photodiode in
-    addinput(dqAI, deviceID, UltrasonicInputChannel, "Voltage");    % ultrasonic in
+    AI = daq("digilent");
+    VP = daq("digilent");
+    
+    disp('DAQ sessions initialized.');
+    
+    % start ultrasonic in background timer
+    ultrasonicData = [];
+    t_ultra = timer('ExecutionMode','fixedSpacing', 'Period', 0.05, ...
+        'TimerFcn', @(~,~) collectUltrasonic());
 
-    dqDigital = daq("digilent"); % On-demand IO
-    addoutput(dqDigital, deviceID, solenoidChannel, "Digital");     % solenoid digital output
+    start(t_ultra);
+    disp("Ultrasonic sensing started.")
 
-    % Put 5V on V+ rail for photodiode supply
-    dqVplus = daq("digilent");
-    addoutput(dqVplus, deviceID, LEDpowerChannel, "Voltage");
-    write(dqVplus, 5);
+    %% Start script execution
+    
+    % 1. Motor control
+    disp("Starting motor control...")
+    StrongmanGameMotorControl(s_Motor, s_Solenoid); 
+    
+    % 2. Light triggers
+    disp("Motor control finished. Running light triggers...")
+    [t1,t2,t3] = StrongmanGameLightTriggers(deviceID, AI, VP, LEDpowerChannel, PhotoDiodeinputChannel);
+    
+    %% Print times, put semicolons to hide
+    fprintf("\nLight Trigger timestamps:\n");
+    fprintf("t1: %.4f s\n", t1);
+    fprintf("t2: %.4f s\n", t2);
+    fprintf("t3: %.4f s\n", t3);
+    
+    % Stop ultrasonic sensing
+    stop(t_ultra);
+    delete(t_ultra);
 
-%% ================= BACKGROUND LIGHT TRIGGERS =================
-disp("Starting light trigger monitoring in background...")
-[t1, t2, t3] = StrongmanGameLightTriggers(dqAI); % Calls separate light trigger function
+    % Compute max measured height
+    h_measured = max(ultrasonicData);
+    fprintf("Measured max height (Ultrasonic): %.2f m\n", h_measured);
 
-%% ================= BACKGROUND ULTRASONIC =================
-disp("Starting ultrasonic sensing in background...")
-ultrasonicData = [];
-t_ultra = timer('ExecutionMode','fixedSpacing','Period',0.05,...
-    'TimerFcn',@(~,~)collectUltrasonic());
-start(t_ultra);
+    % Height estimation script with input from light triggers
+    disp("Calculating predicted height...")
 
-%% ================= MOTOR CONTROL =================
-disp("Calling Motor Control script")
-StrongmanGameMotorControl(dqAO, dqDigital); % Calls motor control script
+    h_predicted = StrongmanGameHeightEstimation(t1,t2,t3);
+    fprintf("Predicted height: %.2f m\n", h_predicted);
 
-%% ================= STOP ULTRASONIC =================
-stop(t_ultra);
-delete(t_ultra);
-h_measured = max(ultrasonicData);
+    % Rotary display driver script with input from predicted height and measured height
+    disp("Activating rotary display...")
+    StrongmanGameRotaryDisplayDriver(h_measured);
 
-disp("Calling height estimation script")
-h_predicted = StrongmanGameHeightEstimation(t1, t2, t3);
-fprintf("Predicted height: %.2f\n", h_predicted);
-fprintf("Measured height: %.2f\n", h_measured);
+    disp("Game finished")
 
-disp("Calling rotary display driver script")
-StrongmanGameRotaryDisplayDriver(h_measured);
+    % Close all sessions
+    delete(s_Motor); clear s_Motor;
+    delete(s_Solenoid); clear s_Solenoid;
+    disp('Closed DAQ sessions.');
 
-% Clean up and release the DAQ session
-write(dqVplus, 0);
-release(dqAO);
-release(dqAI);
-release(dqDigital);
-release(dqVplus);
-daqreset;
-disp("DAQ sessions released. Game ended.");
-
-%% ================= CALLBACK =================
     function collectUltrasonic()
-        h = StrongmanGameUltrasonicSensing(UltrasonicOutputChannel, UltrasonicInputChannel);
-        ultrasonicData(end+1) = h;
+    h_measured = StrongmanGameUltrasonicSensing(UltrasonicOutputChannel, UltrasonicInputChannel);
+    ultrasonicData(end+1) = h_measured;
     end
 end
