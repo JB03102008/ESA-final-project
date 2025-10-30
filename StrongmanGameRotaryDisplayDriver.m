@@ -15,7 +15,7 @@ espIP = "192.168.4.1";                                                      %IPv
 
 %Get some image data from a file NOTE: you need to modify imageLocation to
 %fit your own computer folder structure!
-imageLocation = 'C:\Users\jibbe\Documents\uni\img\123.png';
+imageLocation = 'RotaryDisplayIMG\123.png';
 imagedata = imread(imageLocation); 
 % For your own project, you do not have to use images, you are also allowed to create matrices with the correct data in matlab.
 

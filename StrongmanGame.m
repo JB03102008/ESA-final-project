@@ -72,7 +72,7 @@ function StrongmanGame(deviceID, motorChannel, solenoidChannel, LEDpowerChannel,
 
     % Rotary display driver script with input from predicted height and measured height
     disp("Activating rotary display...")
-    StrongmanGameRotaryDisplayDriver(h_measured);
+    StrongmanGameRotaryDisplayDriver(abs(round(h_measured)), 0);
 
     disp("Game finished")
 
