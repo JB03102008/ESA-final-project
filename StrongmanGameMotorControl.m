@@ -8,7 +8,6 @@
 % Version: 2.0
 
 function StrongmanGameMotorControl(deviceID, motorChannel, solenoidChannel)
-clear; clc; close all;
 
 if nargin < 3
     error('Not enough input arguments. Please provide deviceID, motorChannel, and solenoidChannel.');
@@ -81,5 +80,5 @@ disp('Motor stopped.');
 %% ================= CLEANUP =================
 clear dqMotor dqSolenoid;
 disp('Devices released. Sequence complete.');
-
+clear all;
 end
