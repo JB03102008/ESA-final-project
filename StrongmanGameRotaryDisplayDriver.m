@@ -6,6 +6,9 @@
 % Made by Jibbe Sutorius as part of the ESA final project group 3
 % version 1.0
 
+% Example usage:
+StrongmanGameRotaryDisplayDriver(67, 0);     % first argument is input number, second is log level where 0 = no logs or output, 1 = errors and warnings, 2 = debug data
+
 function StrongmanGameRotaryDisplayDriver(input, loggingLevel)
 % Define some constants
 sPort = 4210;                                                               %The UDP port we are using for communication TO the ESP32
@@ -259,4 +262,5 @@ function log(message, importance, loglevel)
     elseif importance <= loglevel
         disp(message);
     end
+
 end
