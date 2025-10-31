@@ -1,10 +1,18 @@
-function StrongmanGameMotorControl(dqMotor, dqSolenoid)
-%% The Strongman Game - Motor control script v1.0 (First final version)
+%% The Strongman Game - Motor control script v2.0
 % Strongman Game - Motor (clocked square wave) + Solenoid (digital)
 % Uses separate DAQ sessions to keep clocked AO active
-% Made by UTWENTE-BSC-EE-ESA group 3
-% Version: 1.0
+% Example usage: StrongmanGameMotorControl("AD3", "ao1", "dio00")
+% Device ID is AD3, motor connected to ao1 and solenoid connected to dio00
+%
+% Made by Jasper Bloemendal as part of the ESA final project group 3
+% Version: 2.0
 
+function StrongmanGameMotorControl(deviceID, motorChannel, solenoidChannel)
+clear; clc; close all;
+
+if nargin < 3
+    error('Not enough input arguments. Please provide deviceID, motorChannel, and solenoidChannel.');
+end
 %% ================= SETUP PARAMETERS =================
 PWMfreq = 1e3;                     % Square-wave frequency [Hz]
 minDuty = 20;                      % Minimum duty cycle [%]
@@ -13,13 +21,16 @@ solenoidTime = 0.3;                % Solenoid activation duration [s]
 sampleRate = 5e3;                  % Analog output sample rate [Hz]
 
 %% ================= INITIALIZE DEVICES =================
-
-% DAQ sessions init happens in main script
+disp('Initializing Analog Discovery 3 for clocked AO and digital DO...');
 
 % --- Motor session (clocked AO) ---
-sampleRate = dqMotor.Rate; % Use the Rate from the passed session
+dqMotor = daq("digilent");
+dqMotor.Rate = sampleRate;
+addoutput(dqMotor, deviceID, motorChannel, "Voltage");
 
 % --- Solenoid session (on-demand DO) ---
+dqSolenoid = daq("digilent");
+addoutput(dqSolenoid, deviceID, solenoidChannel, "Digital");
 
 disp('Devices initialized successfully.');
 
@@ -68,5 +79,7 @@ write(dqMotor, 0);
 disp('Motor stopped.');
 
 %% ================= CLEANUP =================
+clear dqMotor dqSolenoid;
 disp('Devices released. Sequence complete.');
+
 end

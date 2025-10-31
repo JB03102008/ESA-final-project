@@ -1,89 +1,82 @@
-function [t1, t2, t3] = StrongmanGameLightTriggers(deviceID, AI, VP, voltageChannel, inputChannel)
-%% Strongman Game - light triggers v2.0
-% polls light sensors in real time
-% Made by UTWENTE-BSC-EE-ESA group 3
-% version 2.0
+function [t1, t2, t3] = StrongmanGameLightTriggers(deviceID, voltageChannel, inputChannel)
+%% Strongman Game - Real-time (polling version for Digilent DAQs with live plot)
 
-    % Default values if no input args are given
-    if nargin < 1, AI = "AD3_0"; end
-    if nargin < 2, VP = "V+"; end
-    if nargin < 3, voltageChannel = "ai1"; end % FIX: Added 'end'
-    if nargin < 4, inputChannel = "ai1"; end   % FIX: Assigned default value and added 'end'
-    
-    % DAQ sessions are configured in main script
-    
-    addoutput(VP, deviceID, voltageChannel, "Voltage");
-    addinput(AI, deviceID, inputChannel, "Voltage");
-    AI.Rate = 10000;
-    sampleRate = AI.Rate;
-    
-    write(VP, 5);
-    fprintf("V+ set to 5V\n");
-    
-    % --- Initialize ---
-    t1 = NaN; t2 = NaN; t3 = NaN;
-    dropCount = 0;
-    tStart = tic;
+if nargin < 1, deviceID = "AD3_0"; end
+if nargin < 2, voltageChannel = "V+"; end
+if nargin < 3, inputChannel = "ai1"; end
 
-    % Parameters (Calibrated values)
-    DIP_THRESHOLD_V = 0.01; % Taken from successful test
-    HYSTERESIS_V = 0.02;    % Hysteresis
-    isTriggered = false;    
-    
-    % Pre-initializing the buffer is essential to prevent errors in the loop
-    windowSize = 2 * sampleRate;
-    window = zeros(windowSize, 1);
-    bufferTime = 0.1;
+daqreset;
 
-    fprintf("Monitoring signal... (Blocking execution)\n");
+AI = daq("digilent");
+VP = daq("digilent");
 
-    while dropCount < 3
-        % Read small chunk
-        data = read(AI, seconds(bufferTime));
-        v = data{:,1};
-        
-        % Update rolling window
-        if numel(v) < windowSize
-            window = [window(numel(v)+1:end); v];
-        else
-             window = v;
-        end
+addoutput(VP, deviceID, voltageChannel, "Voltage");
+addinput(AI, deviceID, inputChannel, "Voltage");
+AI.Rate = 10000;
 
-        % Analyze for dips
-        if numel(window) > 50
-            vs = smooth(window, 50);
-        else
-            vs = window;
-        end
-        
-        currentBaseline = max(vs);
-        detectionThreshold = currentBaseline - DIP_THRESHOLD_V;
-        currentValue = vs(end);
-        
-        % Check for Trigger (Dip)
-        if currentValue < detectionThreshold && ~isTriggered
-            dropCount = dropCount + 1;
-            tNow = toc(tStart);
-            isTriggered = true; 
+write(VP, 5);
+fprintf("V+ set to 5V\n");
 
-            switch dropCount
-                case 1
-                    t1 = tNow;
-                    fprintf("Dip 1 detected at %.4f s\n", t1);
-                case 2
-                    t2 = tNow;
-                    fprintf("Dip 2 detected at %.4f s\n", t2);
-                case 3
-                    t3 = tNow;
-                    fprintf("Dip 3 detected at %.4f s\n", t3);
-            end
+% --- Initialize ---
+t1 = NaN; t2 = NaN; t3 = NaN;
+dropCount = 0;
+tStart = tic;
 
-        % Check for Reset (Hysteresis)
-        elseif currentValue > (currentBaseline - HYSTERESIS_V) && isTriggered
-            isTriggered = false; 
-        end
+fprintf("Monitoring signal...\n");
+
+bufferTime = 0.1;  % seconds per read
+window = [];
+timeWindow = [];
+
+% --- Setup live plot ---
+figure;
+hPlot = plot(NaN, NaN, 'b-');
+xlabel('Time (s)');
+ylabel('Voltage (V)');
+title('Strongman Game Signal');
+grid on;
+
+while dropCount < 3
+    % Read small chunk
+    data = read(AI, seconds(bufferTime));
+    v = data{:,1};
+    tChunk = toc(tStart) + linspace(-bufferTime, 0, numel(v))';
+
+    % Append new data
+    window = [window; v];
+    timeWindow = [timeWindow; tChunk];
+
+    % Keep ~2 seconds of recent data
+    if numel(window) > 2*AI.Rate
+        window = window(end-2*AI.Rate+1:end);
+        timeWindow = timeWindow(end-2*AI.Rate+1:end);
     end
 
-    write(VP, 0);
-    fprintf("V+ reset to 0V\n");
+    % --- Update plot ---
+    set(hPlot, 'XData', timeWindow, 'YData', window);
+    drawnow limitrate nocallbacks;
+
+    % --- Analyze for dips ---
+    vs = smooth(window, 50);
+    [~, locs] = findpeaks(-vs, 'MinPeakProminence', 0.05);
+
+    if numel(locs) > dropCount
+        dropCount = numel(locs);
+        tNow = toc(tStart);
+        switch dropCount
+            case 1
+                t1 = tNow;
+                fprintf("Dip 1 at %.4f s\n", t1);
+            case 2
+                t2 = tNow;
+                fprintf("Dip 2 at %.4f s\n", t2);
+            case 3
+                t3 = tNow;
+                fprintf("Dip 3 at %.4f s\n", t3);
+        end
+    end
+end
+
+write(VP, 0);
+fprintf("V+ reset to 0V\n");
 end

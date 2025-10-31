@@ -1,8 +1,12 @@
+%% The Strongman Game - height estimation script v1.0
+% Height estimation based on projectile motion with air resistance.
+% Calculates the predicted max height (h_predicted) from three measured
+% trigger times (t1, t2, t3).
+%
+% Made by Abdallah Mohamed as part of the ESA final project group 3
+% version 1.0
+
 function h_predicted = StrongmanGameHeightEstimation(t1,t2,t3, silentMode)
-    % Height estimation based on projectile motion with air resistance.
-    % Calculates the predicted max height (h_predicted) from three measured
-    % trigger times (t1, t2, t3).
-    
     % Default to verbose mode if silentMode is not provided
     if nargin < 4
         silentMode = false; 

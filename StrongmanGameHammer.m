@@ -1,4 +1,3 @@
-function [Voltage, t] = StrongmanGameHammer()
 % The Strongman Game - random hammer impact signal - version 2.0
 % Simulates a realistic hammer/accelerometer impact signal
 % Produces random amplitude and duration per run for testing motor control
@@ -7,9 +6,10 @@ function [Voltage, t] = StrongmanGameHammer()
 %   Voltage - Simulated accelerometer output (in microvolts)
 %   t       - Time vector (seconds)
 %
-% Made by UTWENTE-BSC-EE-ESA group 3
+% Made by Jasper Bloemendal as part of the ESA final project group 3
 % Version: 2.0
 
+function [Voltage, t] = StrongmanGameHammer()
     rng('shuffle'); % ensure variation every call
 
     % --- Time base ---

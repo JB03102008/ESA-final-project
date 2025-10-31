@@ -1,10 +1,12 @@
-function StrongmanGameRotaryDisplayDriver(input, loggingLevel)
-% The Strongman Game - rotary display driver script version 0.1
+% The Strongman Game - rotary display driver script version 1.0
 % Displays a number defined in the input variable on a rotary display
+% Example usage: StrongmanGameRotaryDisplayDriver(67, 0) 
+% 67 is displayed, logging level is set to 0
 %
-% Made by UTWENTE-BSC-EE-ESA group 3
-% version 0.1
+% Made by Jibbe Sutorius as part of the ESA final project group 3
+% version 1.0
 
+function StrongmanGameRotaryDisplayDriver(input, loggingLevel)
 % Define some constants
 sPort = 4210;                                                               %The UDP port we are using for communication TO the ESP32
 rPort = 4211;                                                               %The UDP port we are using for communication FROM the ESP32
@@ -44,8 +46,6 @@ dispCommand(1)=4;                                                           %the
 dispCommand(2)=1;                                                           %value 3 means we are selecting the accelerometer Z sensor
 udps(dispCommand);                                                          %send the command.
 
-%% This example shows how to receive the accelerometer data from the ESP32
-%readIndex = 0;
 
 
 inputNumber = input;
@@ -173,9 +173,9 @@ function image = setImageNumberTo(inputNumber, logLevel)
     imagedataDigit2 = ~imagedataDigit2(:,:,1);
     imagedataDigit3 = ~imagedataDigit3(:,:,1);
     imagedataDigit4 = ~imagedataDigit4(:,:,1);
-    imagedataDigit5 = ~imagedataDigit5(:,:,1); % ??????????? WTF
+    imagedataDigit5 = ~imagedataDigit5(:,:,1);
     imagedataDigit6 = imagedataDigit6(:,:,1);
-    imagedataDigit7 = ~imagedataDigit7(:,:,1); % same thing, I got no fucking clue. btw all the other ones are redundent but oh well
+    imagedataDigit7 = ~imagedataDigit7(:,:,1);
     imagedataDigit8 = imagedataDigit8(:,:,1);
     imagedataDigit9 = imagedataDigit9(:,:,1);
     imagedataDigit0 = ~imagedataDigit0(:,:,1);
@@ -183,29 +183,17 @@ function image = setImageNumberTo(inputNumber, logLevel)
     imagedataSubScript = imread('RotaryDisplayIMG\yay.png'); 
     imagedataSubScript = ~imagedataSubScript(:,:,1);
 
-
-% For your own project, you do not have to use images, you are also allowed to create matrices with the correct data in matlab.
-
-    %finalImage(:, 3:3+size(imagedataDigit1,2)-1) = imagedataDigit1
-    %finalImage = AddDigitArrayAtColumn(finalImage, imagedataDigit1, 3)
-
-%%
-
     char = num2str(inputNumber);
-    %firstDigit = char(3)
     length = strlength(char);
     initialSpacing = 0;
     spacing = 1;
     finalImage = zeros(12,24);
 
     for i = 1:length
-     %display(i);
      switch char(i)
          case "0"
-             %display("0");
              finalImage = AddDigitToImage(finalImage, imagedataDigit0, i, initialSpacing, spacing);
          case "1"
-             %display("1");
              finalImage = AddDigitToImage(finalImage, imagedataDigit1, i, initialSpacing, spacing);
          case "2"
              finalImage = AddDigitToImage(finalImage, imagedataDigit2, i, initialSpacing, spacing);
@@ -226,13 +214,11 @@ function image = setImageNumberTo(inputNumber, logLevel)
     
         end
     end
-    %finalImage = AddSubScriptToImage(finalImage, imagedataSubScript, 13)
     image = ~finalImage;
-    %image(12,:) = 0;
     log(image, 2, logLevel);
 
 end
-%%
+
 function A = AddDigitToImage(A, B, i, initialSpacing, spacing)
     x = initialSpacing+(i-1)*size(B,2)+(i-1)*spacing+1;
     A(:, x:x+size(B,2)-1) = B;
@@ -243,7 +229,7 @@ function A = AddSubScriptToImage(A,B, spacing)
 end
 
 
-%%
+
 function isLinear = checkLinearArray(arr, tol, logLevel)
     % Check if the array is linear within the given tolerance
     if nargin < 2
@@ -265,7 +251,7 @@ function isLinear = checkLinearArray(arr, tol, logLevel)
     end
 end
 
-%%
+
 function log(message, importance, loglevel)
     if importance <= 0 || importance > 2
         disp("ya made a dumb dumb at the following log message!!!!!!!!!!!!!!!:");
