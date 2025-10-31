@@ -1,9 +1,17 @@
-function [t1, t2, t3] = StrongmanGameLightTriggers(deviceID, voltageChannel, inputChannel)
-%% Strongman Game - Real-time (polling version for Digilent DAQs with live plot)
+%% The Strongman Game - Light triggers script version 1.0
+% Analog readout and live plotting for light triggers
+% Uses the daq toolbox
+% Example usage: StrongmanGameLightTriggers("AD3", "V+", "ai0")
+%
+% Made by Jasper Bloemendal as part of the ESA final project group 3
+% Version 1.0
 
+function [t1, t2, t3] = StrongmanGameLightTriggers(deviceID, voltageChannel, inputChannel)
+
+% Default values if no input arguments are supplied
 if nargin < 1, deviceID = "AD3_0"; end
 if nargin < 2, voltageChannel = "V+"; end
-if nargin < 3, inputChannel = "ai1"; end
+if nargin < 3, inputChannel = "ai0"; end
 
 daqreset;
 
